@@ -2,8 +2,10 @@
 """Software for managing and analysing patients' inflammation data in our imaginary hospital."""
 
 import argparse
+import os
 
 from inflammation import models, views
+from inflammation.compute_data import analyse_data
 
 
 def main(args):
@@ -13,12 +15,13 @@ def main(args):
     - selecting the necessary models and views for the current task
     - passing data between models and views
     """
-    in_files = args.infiles
-    if not isinstance(in_files, list):
-        in_files = [args.infiles]
+    infiles = args.infiles
+    if not isinstance(infiles, list):
+        infiles = [args.infiles]
 
-    for filename in in_files:
-        inflammation_data = models.load_csv(filename) 
+
+    for filename in infiles:
+        inflammation_data = models.load_csv(filename)
 
         view_data = {
             'average': models.daily_mean(inflammation_data),
@@ -27,7 +30,6 @@ def main(args):
             }
 
         views.visualize(view_data)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,6 +40,26 @@ if __name__ == "__main__":
         nargs='+',
         help='Input CSV(s) containing inflammation series for each patient')
 
+    parser.add_argument(
+        '--full-data-analysis',
+        action='store_true',
+        dest='full_data_analysis')
+
     args = parser.parse_args()
 
     main(args)
+
+if args.full_data_analysis:
+    pathway = "/home/jk8173/python-intermediate-inflammation/data/"
+    _, extension = os.path.splitext("/home/jk8173/python-intermediate-inflammation/data/inflammation-01.csv")
+    if extension == '.json':
+        data_source = JSONDataSource(os.path.dirname(pathway))
+    elif extension == '.csv':
+        data_source = CSVDataSource(os.path.dirname(pathway))
+    else:
+        raise ValueError(f'Unsupported file format: {extension}')
+    data_result = analyse_data(data_source)
+    graph_data = {
+        'standard deviation by day': data_result,
+    }
+    views.visualize(graph_data)
